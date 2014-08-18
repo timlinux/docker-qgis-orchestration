@@ -1,15 +1,15 @@
 #!/bin/bash
 
 BASE_DIR=/var/www/
-WEB_DIR=${BASE_DIR}/web
+
+STORAGE_CONTAINER=storage
 
 BTSYNC_GIT_REPO=docker-qgis-btsync
 BTSYNC_IMAGE=qgis-btsync
-BTSYNC_CONTAINER=qgis-btsync
 
 POSTGIS_GIT_REPO=docker-postgis
 POSTGIS_IMAGE=postgis
-POSTGIS_CONTAINER=qgis-postgis
+POSTGIS_CONTAINER=postgis
 
 QGIS_SERVER_GIT_REPO=docker-qgis-server
 QGIS_SERVER_IMAGE=qgis-server
@@ -21,6 +21,9 @@ QGIS_DESKTOP_CONTAINER=qgis-desktop
 
 function make_directories {
 
+    NAME=$1
+    WEB_DIR=${BASE_DIR}/${CLIENT_ID}-web
+    
     if [ ! -d ${WEB_DIR} ]
     then
         mkdir -p ${WEB_DIR}
@@ -59,15 +62,50 @@ function run_btsync_container {
     echo "Running btsync container"
     echo "====================================="
 
+    # Call this function with a unique client ID which 
+    # will be prefixed to the container name
+    CLIENT_ID=$1
+    WEB_DIR=${BASE_DIR}/${CLIENT_ID}-web
+
     make_directories
 
-    kill_container ${BTSYNC_CONTAINER}
+    kill_container ${CLIENT_ID}-${STORAGE_CONTAINER}
 
-    docker run --name="${BTSYNC_CONTAINER}" \
+    docker run --name="${CLIENT_ID}-${STORAGE_CONTAINER}" \
         -v ${WEB_DIR}:/web \
         -p 8888:8888 \
         -p 55555:55555 \
         -d -t kartoza/${BTSYNC_IMAGE}
+
+}
+
+function run_storage_container {
+
+    echo ""
+    echo "Running storage container"
+    echo "====================================="
+
+    # This is an alternative to using btsync - if you want to
+    # simply share a volume from the host into the orchestrated
+    # container array - it will act and look like btsync to 
+    # the other containers but will simply provide data from 
+    # the host without running btsync. This is useful in cases
+    # where the host is already running btsync.
+
+    # Call this function with a unique client ID which 
+    # will be prefixed to the container name
+    CLIENT_ID=$1
+    WEB_DIR=${BASE_DIR}/${CLIENT_ID}-web
+
+    make_directories
+
+    kill_container ${CLIENT_ID}-${STORAGE_CONTAINER}
+
+    docker run --name="${CLIENT_ID}-${STORAGE_CONTAINER}" \
+        -v ${WEB_DIR}:/web \
+        -p 8888:8888 \
+        -p 55555:55555 \
+        -d -t kartoza/${BTSYNC_IMAGE} /bin/bash
 
 }
 
@@ -87,11 +125,16 @@ function run_postgis_container {
     echo "Running postgis container"
     echo "====================================="
 
+    # Call this function with a unique client ID which 
+    # will be prefixed to the container name
+    CLIENT_ID=$1
+
+
     make_directories
 
-    kill_container ${POSTGIS_CONTAINER}
+    kill_container ${CLIENT_ID}-${POSTGIS_CONTAINER}
 
-    docker run --name="${POSTGIS_CONTAINER}" \
+    docker run --name="${CLIENT_ID}-${POSTGIS_CONTAINER}" \
         -d -t kartoza/${POSTGIS_IMAGE}
 
 }
@@ -112,23 +155,28 @@ function run_qgis_server_container {
     echo "Running QGIS Server container"
     echo "====================================="
 
-    kill_container ${QGIS_SERVER_CONTAINER}
+    # Call this function with a unique client ID which 
+    # will be prefixed to the container name
+    CLIENT_ID=$1
+
+
+    kill_container ${CLIENT_ID}-${QGIS_SERVER_CONTAINER}
 
     make_directories
 
-    # We mount BTSYNC volumes which provides
+    # We mount STORAGE volumes which provides
     # /web into this container
-    # and we link POSTGIS and BTSYNC
+    # and we link POSTGIS and STORAGE
     # to establish a dependency on them
     # when bringing this container up
     # The posgis link wil add a useful
     # entry to /etc/hosts that should be used
     # referencing postgis layers
     set -x
-    docker run --name="${QGIS_SERVER_CONTAINER}" \
-        --volumes-from ${BTSYNC_IMAGE} \
-        --link=${POSTGIS_CONTAINER}:${POSTGIS_CONTAINER} \
-	--link=${BTSYNC_CONTAINER}:${BTSYNC_CONTAINER} \
+    docker run --name="${CLIENT_ID}-${QGIS_SERVER_CONTAINER}" \
+        --volumes-from ${CLIENT_ID}-${STORAGE_CONTAINER} \
+        --link=${CLIENT_ID}-${POSTGIS_CONTAINER}:${CLIENT_ID}-${POSTGIS_CONTAINER} \
+	--link=${CLIENT_ID}-${STORAGE_CONTAINER}:${CLIENT_ID}-${STORAGE_CONTAINER} \
         -p 8198:80 \
         -d -t kartoza/${QGIS_SERVER_IMAGE}
 }
@@ -148,26 +196,30 @@ function run_qgis_desktop_container {
     echo ""
     echo "Running QGIS Desktop container"
     echo "====================================="
+
+    # Call this function with a unique client ID which 
+    # will be prefixed to the container name
+    CLIENT_ID=$1
+
     xhost +
     # Users home is mounted as home
     # --rm will remove the container as soon as it ends
 
-    # We mount BTSYNC volumes which provides
+    # We mount STORAGE volumes which provides
     # /web into this container
-    # and we link POSTGIS and BTSYNC
+    # and we link POSTGIS and STORAGE
     # to establish a dependency on them
     # when bringing this container up
     # The posgis link wil add a useful
     # entry to/etc/hosts that should be used
     # referencing postgis layers
 
-    set -x
-    docker run --rm --name="${QGIS_DESKTOP_CONTAINER}" \
+    docker run --rm --name="${CLIENT_ID}-${QGIS_DESKTOP_CONTAINER}" \
 	-i -t \
-        --volumes-from ${BTSYNC_IMAGE} \
+        --volumes-from ${CLIENT_ID}-${STORAGE_CONTAINER} \
 	-v ${HOME}:/home/${USER} \
-        --link=${POSTGIS_CONTAINER}:${POSTGIS_CONTAINER} \
-	--link=${BTSYNC_CONTAINER}:${BTSYNC_CONTAINER} \
+        --link=${CLIENT_ID}-${POSTGIS_CONTAINER}:${CLIENT_ID}-${POSTGIS_CONTAINER} \
+	--link=${CLIENT_ID}-${STORAGE_CONTAINER}:${CLIENT_ID}-${STORAGE_CONTAINER} \
 	-v /tmp/.X11-unix:/tmp/.X11-unix \
 	-e DISPLAY=unix$DISPLAY \
 	kartoza/${QGIS_DESKTOP_IMAGE}:latest 
