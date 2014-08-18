@@ -76,6 +76,14 @@ function kill_client_containers {
     done
 }
 
+function purge {
+    # Remove all client data in the storage path on host
+    # CAUTION: when purging client data will be lost!
+    CLIENT_ID=$1
+    rm -rf ${BASE_DIR}/${CLIENT_ID}-*
+    ls ${BASE_DIR}
+}
+
 function build_btsync_image {
 
     echo ""
@@ -97,7 +105,7 @@ function run_btsync_container {
     CLIENT_ID=$1
     WEB_DIR=${BASE_DIR}/${CLIENT_ID}-web
 
-    make_directories
+    make_directories ${CLIENT_ID}
 
     kill_container ${CLIENT_ID}-${STORAGE_CONTAINER}
 
@@ -127,7 +135,7 @@ function run_storage_container {
     CLIENT_ID=$1
     WEB_DIR=${BASE_DIR}/${CLIENT_ID}-web
 
-    make_directories
+    make_directories ${CLIENT_ID}
 
     kill_container ${CLIENT_ID}-${STORAGE_CONTAINER}
 
@@ -160,7 +168,7 @@ function run_postgis_container {
     PG_DIR=${BASE_DIR}/${CLIENT_ID}-pg
 
 
-    make_directories
+    make_directories ${CLIENT_ID}
 
     kill_container ${CLIENT_ID}-${POSTGIS_CONTAINER}
 
@@ -193,7 +201,7 @@ function run_qgis_server_container {
 
     kill_container ${CLIENT_ID}-${QGIS_SERVER_CONTAINER}
 
-    make_directories
+    make_directories ${CLIENT_ID}
 
     # We mount STORAGE volumes which provides
     # /web into this container
