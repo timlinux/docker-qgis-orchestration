@@ -142,7 +142,7 @@ function run_storage_container {
     # Simply run bash in daemon mode to consume no resources
     docker run --name="${CLIENT_ID}-${STORAGE_CONTAINER}" \
         -v ${WEB_DIR}:/web \
-        -d -t kartoza/${BTSYNC_IMAGE} /bin/bash
+        -d -t ubuntu:latest /bin/bash
 
 }
 
@@ -173,7 +173,7 @@ function run_postgis_container {
     kill_container ${CLIENT_ID}-${POSTGIS_CONTAINER}
 
     docker run --name="${CLIENT_ID}-${POSTGIS_CONTAINER}" \
-        -v ${PG_DIR}:/var/lib/postgresql
+        -v ${PG_DIR}:/var/lib/postgresql \
         -d -t kartoza/${POSTGIS_IMAGE}
 
 }

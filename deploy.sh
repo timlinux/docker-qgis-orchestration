@@ -19,11 +19,11 @@ fi
 
 if test -z "$2"
 then
-  run_storage_container $1
+  run_btsync_container $1
   run_postgis_container $1
   run_qgis_server_container $1
 else
-  run_btsync_container $1
+  run_storage_container $1
   run_postgis_container $1
   run_qgis_server_container $1
 fi
