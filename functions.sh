@@ -124,7 +124,6 @@ function run_qgis_server_container {
     # The posgis link wil add a useful
     # entry to /etc/hosts that should be used
     # referencing postgis layers
-    set -x
     docker run --name="${QGIS_SERVER_CONTAINER}" \
         --volumes-from ${BTSYNC_IMAGE} \
         --link=${POSTGIS_CONTAINER}:${POSTGIS_CONTAINER} \
