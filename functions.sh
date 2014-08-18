@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_DIR=/var/www/
+BASE_DIR=/var/lib/kartoza-cloud
 
 STORAGE_CONTAINER=storage
 
@@ -21,18 +21,35 @@ QGIS_DESKTOP_CONTAINER=qgis-desktop
 
 function make_directories {
 
-    NAME=$1
+    CLIENT_ID=$1
+
+    # Ensure the base dir exists
+    if [ ! -d ${BASE_DIR} ]
+    then
+        sudo mkdir -p ${BASE_DIR}
+        sudo chown ${USER}.${USER} ${BASE_DIR}
+    fi
+    # Create a directory for persisting the
+    # clients web / gis resources
     WEB_DIR=${BASE_DIR}/${CLIENT_ID}-web
-    
     if [ ! -d ${WEB_DIR} ]
     then
         mkdir -p ${WEB_DIR}
     fi
 
+    # Create a directory for persisting the postgresql
+    # database cluster
+    PG_DIR=${BASE_DIR}/${CLIENT_ID}-pg
+    if [ ! -d ${PG_DIR} ]
+    then
+        mkdir -p ${PG_DIR}
+    fi
+
 }
 
 function kill_container {
-
+    # kill a single named container
+    # host based volumes will be preserved
     NAME=$1
 
     if docker ps -a | grep ${NAME} > /dev/null
@@ -44,6 +61,19 @@ function kill_container {
         echo "${NAME} is not running"
     fi
 
+}
+
+function kill_client_containers {
+    # kill all containers for a given client / customer
+    # Call this function with a unique client ID which 
+    # will be prefixed to the container name
+    # host based volumes will be preserved
+    CLIENT_ID=$1
+    for CONTAINER in `dnames`
+    do 
+        docker kill $CONTAINER
+        docker rm $CONTAINER
+    done
 }
 
 function build_btsync_image {
@@ -101,10 +131,9 @@ function run_storage_container {
 
     kill_container ${CLIENT_ID}-${STORAGE_CONTAINER}
 
+    # Simply run bash in daemon mode to consume no resources
     docker run --name="${CLIENT_ID}-${STORAGE_CONTAINER}" \
         -v ${WEB_DIR}:/web \
-        -p 8888:8888 \
-        -p 55555:55555 \
         -d -t kartoza/${BTSYNC_IMAGE} /bin/bash
 
 }
@@ -128,6 +157,7 @@ function run_postgis_container {
     # Call this function with a unique client ID which 
     # will be prefixed to the container name
     CLIENT_ID=$1
+    PG_DIR=${BASE_DIR}/${CLIENT_ID}-pg
 
 
     make_directories
@@ -135,6 +165,7 @@ function run_postgis_container {
     kill_container ${CLIENT_ID}-${POSTGIS_CONTAINER}
 
     docker run --name="${CLIENT_ID}-${POSTGIS_CONTAINER}" \
+        -v ${PG_DIR}:/var/lib/postgresql
         -d -t kartoza/${POSTGIS_IMAGE}
 
 }
