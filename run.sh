@@ -1,6 +1,11 @@
 #!/bin/bash
 
-date > /tmp/qgis-demo-server-log.txt
+if test -z "$1"
+then
+  echo "usage: $0 <client_id>"
+  echo "e.g. : $0 798791"
+  exit
+fi
 
 DIR=`dirname $0`
 source ${DIR}/functions.sh

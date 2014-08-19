@@ -125,8 +125,14 @@ e18b1292956b        kartoza/postgis:latest       /bin/sh -c /start-po   1 second
 *Usage:*
 
 ```bash
-./run.sh
+./run.sh <organisation|client_id>
 ```
+
+*Arguments:*
+
+* **organisation|client_id** : The first argument should be a client name or id
+  comprised of only letters and numbers. Do not use hyphens or other characters
+  than those specified in this regex: ``[A-Za-z0-9]*``.
 
 This script will run QGIS Desktop as a containerised app. The storage container
 (see above) will be mounted into it as `/web`. The active user's home directory
@@ -148,7 +154,7 @@ your sysadmin if in doubt.
 **Usage:**
 
 ```bash
-./kill.sh [<organisation|client_id>
+./kill.sh <organisation|client_id>
 ```
 
 This script will kill and remove containers for all the long running daemons
@@ -170,7 +176,7 @@ should bring up all client services again normally.
 **Usage:**
 
 ```bash
-./purge.sh [<organisation|client_id>
+./purge.sh <organisation|client_id>
 ```
 
 This script will kill and remove host storage directories for all the long running daemons

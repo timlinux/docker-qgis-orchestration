@@ -240,6 +240,11 @@ function run_qgis_desktop_container {
     echo "Running QGIS Desktop container"
     echo "====================================="
 
+    if test -z "$1"
+    then
+        echo "Error: you mush specify the client id as parameter"
+        return
+    fi
     # Call this function with a unique client ID which 
     # will be prefixed to the container name
     CLIENT_ID=$1
