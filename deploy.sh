@@ -27,4 +27,8 @@ else
   run_postgis_container $1
   run_qgis_server_container $1
 fi
+echo ""
+echo "Containers running for client: ${1}"
+echo "=========================================="
+
 docker ps -a | grep $1

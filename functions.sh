@@ -216,7 +216,6 @@ function run_qgis_server_container {
     # The posgis link wil add a useful
     # entry to /etc/hosts that should be used
     # referencing postgis layers
-    set -x
     docker run --name="${CLIENT_ID}-${QGIS_SERVER_CONTAINER}" \
         --volumes-from ${CLIENT_ID}-${STORAGE_CONTAINER} \
         --link=${CLIENT_ID}-${POSTGIS_CONTAINER}:${CLIENT_ID}-${POSTGIS_CONTAINER} \
