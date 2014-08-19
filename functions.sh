@@ -43,6 +43,7 @@ function make_directories {
     if [ ! -d ${PG_DIR} ]
     then
         mkdir -p ${PG_DIR}
+        chmod a+w ${PG_DIR}
     fi
 
 }
@@ -69,11 +70,15 @@ function kill_client_containers {
     # will be prefixed to the container name
     # host based volumes will be preserved
     CLIENT_ID=$1
-    for CONTAINER in `dnames`
+    NAMES=`docker ps -a |grep -v "Exit" | grep -o "[a-zA-Z\.\-]*[ ]*$" | sed 's/ //g' | grep -v "NAMES" | grep "^${CLIENT_ID}-"`
+    for CONTAINER in $NAMES
     do 
-        docker kill $CONTAINER
-        docker rm $CONTAINER
+        echo "Killing ${CONTAINER}"
+        docker kill ${CONTAINER} > /dev/null
+        docker rm ${CONTAINER} > /dev/null
     done
+    echo "Containers left running with ${CLIENT_ID} in their names:"
+    docker ps -a | grep ${CLIENT_ID}
 }
 
 function purge {
