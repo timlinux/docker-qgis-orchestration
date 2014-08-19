@@ -1,9 +1,22 @@
-# QGIS Mapserver Demo Orchestration
+# QGIS Mapserver Orchestration
 
-Orchestration scripts for running QGIS demo server.
+Orchestration scripts for running QGIS Mapserver.
 
 To use you need to have docker installed on any linux host. You
 need a minimum of docker 1.0.0
+
+# General usage
+
+The orchestration scripts provided here will build against docker recipes
+hosted in GitHub - there is no need to check them all out individually. So 
+to use all you need to do is (on your host):
+
+```
+git clone https://github.com/kartoza/docker-qgis-orchestration.git
+cd docker-qgis-orchestration
+./build.sh
+./deploy.sh
+```
 
 # Scripts
 
@@ -130,25 +143,58 @@ or interfere with other display related settings on your desktop. Check with
 your sysadmin if in doubt.
 
 
+## kill
+
+**Usage:**
+
+```bash
+./kill.sh [<organisation|client_id>
+```
+
+This script will kill and remove containers for all the long running daemons
+defined for a client. A simple regex match based on the client name is used to
+determine which containers to kill.
+
+*Arguments:*
+
+* **organisation|client_id** : The first argument should be a client name or id
+  comprised of only letters and numbers. Do not use hyphens or other characters
+  than those specified in this regex: ``[A-Za-z0-9]*``.
+
+**Note:** This is generally a recoverable operation - storage volumes in 
+`/var/lib/kartoza/<client_id>-*` are preserved and rerunning `deploy.sh`
+should bring up all client services again normally.
+
+## purge
+
+**Usage:**
+
+```bash
+./purge.sh [<organisation|client_id>
+```
+
+This script will kill and remove host storage directories for all the long running daemons
+defined for a client. A simple regex match based on the client name is used to
+determine which storage directories to destroy.
+
+*Arguments:*
+
+* **organisation|client_id** : The first argument should be a client name or id
+  comprised of only letters and numbers. Do not use hyphens or other characters
+  than those specified in this regex: ``[A-Za-z0-9]*``.
+
+**Warning:** This is a **non-recoverable operation** - storage volumes in
+`/var/lib/kartoza/<client_id>-*` are destroyed and rerunning `deploy.sh` should
+bring up all client services with a clean state. If you are using the btsync
+storage container, the data will be resynchronised but local storage will be
+destroyed. Also all postgresql data will be lost permanently.
+
+
 ## functions  
 
 There is an additional script called `functions.sh` which contains common
 functions shared by all scripts.
 
-
-# General usage
-
-The orchestration scripts provided here will build against docker recipes
-hosted in GitHub - there is no need to check them all out individually. So 
-to use all you need to do is (on your host):
-
-
-```
-git clone https://github.com/kartoza/docker-qgis-orchestration.git
-cd docker-qgis-orchestration
-./build.sh
-./deploy.sh
-```
 
 # Reverse proxy
 
