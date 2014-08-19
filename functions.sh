@@ -27,7 +27,8 @@ function make_directories {
     if [ ! -d ${BASE_DIR} ]
     then
         sudo mkdir -p ${BASE_DIR}
-        sudo chown ${USER}.${USER} ${BASE_DIR}
+        OWNER=${USER}
+        sudo chown ${OWNER}.${OWNER} ${BASE_DIR}
     fi
     # Create a directory for persisting the
     # clients web / gis resources
@@ -85,8 +86,31 @@ function purge {
     # Remove all client data in the storage path on host
     # CAUTION: when purging client data will be lost!
     CLIENT_ID=$1
-    rm -rf ${BASE_DIR}/${CLIENT_ID}-*
+    sudo rm -rf ${BASE_DIR}/${CLIENT_ID}-*
     ls ${BASE_DIR}
+}
+
+function get_next_port {
+
+    # Get next available port on the server
+    # it stores the last used port in LASTPORT.txt
+    # If that file does not exist then it will be created
+    # and a default starting port of 30000 will be used
+    
+    # Useage:
+    #
+    # PORT=$(get_next_port)
+    # echo $PORT    
+
+    # Ensure the LASTPORT.txt exists
+    PORT_COUNTER=LASTPORT.txt
+    if [ ! -f LASTPORT.txt ]
+    then
+        echo "30000" > LASTPORT.txt
+    fi
+    LAST=`cat ${PORT_COUNTER}`; echo "$LAST + 1" | bc > ${PORT_COUNTER}
+    cat ${PORT_COUNTER}
+
 }
 
 function build_btsync_image {
@@ -101,19 +125,21 @@ function build_btsync_image {
 
 function run_btsync_container {
 
-    echo ""
-    echo "Running btsync container"
-    echo "====================================="
-
     # Call this function with a unique client ID which 
     # will be prefixed to the container name
     CLIENT_ID=$1
+    echo "" >> {CLIENT_ID}.log
+    echo "Running btsync container" >> {CLIENT_ID}.log
+    echo "=====================================" >> {CLIENT_ID}.log
+
     WEB_DIR=${BASE_DIR}/${CLIENT_ID}-web
 
     make_directories ${CLIENT_ID}
 
     kill_container ${CLIENT_ID}-${STORAGE_CONTAINER}
 
+    # TODO figure out how to softcode these ports
+    # They need to be sofcoded in the btsync.conf file too
     docker run --name="${CLIENT_ID}-${STORAGE_CONTAINER}" \
         -v ${WEB_DIR}:/web \
         -p 8888:8888 \
@@ -124,9 +150,13 @@ function run_btsync_container {
 
 function run_storage_container {
 
-    echo ""
-    echo "Running storage container"
-    echo "====================================="
+    # Call this function with a unique client ID which 
+    # will be prefixed to the container name
+    CLIENT_ID=$1
+
+    echo "" >> {CLIENT_ID}.log
+    echo "Running storage container" >> {CLIENT_ID}.log
+    echo "=====================================" >> {CLIENT_ID}.log
 
     # This is an alternative to using btsync - if you want to
     # simply share a volume from the host into the orchestrated
@@ -135,9 +165,6 @@ function run_storage_container {
     # the host without running btsync. This is useful in cases
     # where the host is already running btsync.
 
-    # Call this function with a unique client ID which 
-    # will be prefixed to the container name
-    CLIENT_ID=$1
     WEB_DIR=${BASE_DIR}/${CLIENT_ID}-web
 
     make_directories ${CLIENT_ID}
@@ -163,13 +190,14 @@ function build_postgis_image {
 
 function run_postgis_container {
 
-    echo ""
-    echo "Running postgis container"
-    echo "====================================="
-
     # Call this function with a unique client ID which 
     # will be prefixed to the container name
     CLIENT_ID=$1
+
+    echo "" >> {CLIENT_ID}.log
+    echo "Running postgis container" >> {CLIENT_ID}.log
+    echo "=====================================" >> {CLIENT_ID}.log
+
     PG_DIR=${BASE_DIR}/${CLIENT_ID}-pg
 
 
@@ -177,17 +205,20 @@ function run_postgis_container {
 
     kill_container ${CLIENT_ID}-${POSTGIS_CONTAINER}
 
+    PORT=$(get_next_port)
     docker run --name="${CLIENT_ID}-${POSTGIS_CONTAINER}" \
+        -p ${PORT}:5432 \
         -v ${PG_DIR}:/var/lib/postgresql \
         -d -t kartoza/${POSTGIS_IMAGE}
+    echo "Database forwarded to host on port ${PORT}" >> {CLIENT_ID}.log
 
 }
 
 function build_qgis_server_image {
 
-    echo ""
-    echo "Building QGIS Server Image"
-    echo "====================================="
+    echo "" >> {CLIENT_ID}.log
+    echo "Building QGIS Server Image" >> {CLIENT_ID}.log
+    echo "=====================================" >> {CLIENT_ID}.log
 
     docker build -t kartoza/${QGIS_SERVER_IMAGE} git://github.com/${ORG}/${QGIS_SERVER_GIT_REPO}.git
 
@@ -195,14 +226,13 @@ function build_qgis_server_image {
 
 function run_qgis_server_container {
 
-    echo ""
-    echo "Running QGIS Server container"
-    echo "====================================="
-
     # Call this function with a unique client ID which 
     # will be prefixed to the container name
     CLIENT_ID=$1
 
+    echo "" >> {CLIENT_ID}.log
+    echo "Running QGIS Server container" >> {CLIENT_ID}.log
+    echo "=====================================" >> {CLIENT_ID}.log
 
     kill_container ${CLIENT_ID}-${QGIS_SERVER_CONTAINER}
 
@@ -216,12 +246,16 @@ function run_qgis_server_container {
     # The posgis link wil add a useful
     # entry to /etc/hosts that should be used
     # referencing postgis layers
+    PORT=$(get_next_port)
     docker run --name="${CLIENT_ID}-${QGIS_SERVER_CONTAINER}" \
         --volumes-from ${CLIENT_ID}-${STORAGE_CONTAINER} \
         --link=${CLIENT_ID}-${POSTGIS_CONTAINER}:${CLIENT_ID}-${POSTGIS_CONTAINER} \
 	--link=${CLIENT_ID}-${STORAGE_CONTAINER}:${CLIENT_ID}-${STORAGE_CONTAINER} \
-        -p 8198:80 \
+        -p ${PORT}:80 \
         -d -t kartoza/${QGIS_SERVER_IMAGE}
+    echo "Apache forwarded to host on port ${PORT}" >> {CLIENT_ID}.log
+
+    
 }
 
 function build_qgis_desktop_image {
@@ -236,7 +270,7 @@ function build_qgis_desktop_image {
 
 function run_qgis_desktop_container {
 
-    echo ""
+    echo "" >> {CLIENT_ID}.log
     echo "Running QGIS Desktop container"
     echo "====================================="
 
