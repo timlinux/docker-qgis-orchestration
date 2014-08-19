@@ -15,7 +15,7 @@ to use all you need to do is (on your host):
 git clone https://github.com/kartoza/docker-qgis-orchestration.git
 cd docker-qgis-orchestration
 ./build.sh
-./deploy.sh
+./deploy.sh acmecorp
 ```
 
 # Scripts
@@ -198,7 +198,7 @@ functions shared by all scripts.
 
 # Reverse proxy
 
-Lastly you will probably want to set up a reverse proxy pointing to your QGIS
+You will probably want to set up a reverse proxy pointing to your QGIS
 Mapserver container (our orchestration scripts publish on 8198 by default).
 Here is a sample configuration for nginx:
 
